@@ -14,6 +14,8 @@ class ShootingGame {
         this.gameTimer = null;
         this.targetTimer = null;
         this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        this.playerName = '';
+        this.leaderboard = this.loadLeaderboard();
         
         // 设置画布大小
         this.resizeCanvas();
@@ -45,9 +47,30 @@ class ShootingGame {
     }
 
     setupEventListeners() {
+        // 玩家昵称输入处理
+        const playerNameInput = document.getElementById('playerName');
+        const startButton = document.getElementById('startGame');
+        const errorMessage = document.getElementById('errorMessage');
+
+        playerNameInput.addEventListener('input', (e) => {
+            const name = e.target.value.trim();
+            if (name.length > 0) {
+                if (this.isNameDuplicate(name)) {
+                    errorMessage.style.display = 'block';
+                    startButton.disabled = true;
+                } else {
+                    errorMessage.style.display = 'none';
+                    startButton.disabled = false;
+                }
+            } else {
+                startButton.disabled = true;
+                errorMessage.style.display = 'none';
+            }
+        });
+
         // 触摸事件
         this.canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // 防止双击缩放
+            e.preventDefault();
             if (!this.gameStarted || !this.target) return;
             
             const touch = e.touches[0];
@@ -58,7 +81,7 @@ class ShootingGame {
             this.checkHit(x, y);
         }, { passive: false });
 
-        // 鼠标点击事件（桌面设备）
+        // 鼠标点击事件
         this.canvas.addEventListener('click', (e) => {
             if (!this.gameStarted || !this.target || this.isMobile) return;
             
@@ -79,9 +102,83 @@ class ShootingGame {
         document.getElementById('startGame').addEventListener('click', (e) => {
             e.preventDefault();
             if (!this.gameStarted) {
-                this.startGame();
+                const nameInput = document.getElementById('playerName');
+                this.playerName = nameInput.value.trim();
+                if (this.playerName) {
+                    nameInput.disabled = true;
+                    this.startGame();
+                }
             }
         });
+    }
+
+    loadLeaderboard() {
+        const saved = localStorage.getItem('shootingGameLeaderboard');
+        return saved ? JSON.parse(saved) : [];
+    }
+
+    saveLeaderboard() {
+        localStorage.setItem('shootingGameLeaderboard', JSON.stringify(this.leaderboard));
+    }
+
+    isNameDuplicate(name) {
+        const currentTime = new Date().getTime();
+        // 清理超过24小时的记录
+        this.leaderboard = this.leaderboard.filter(entry => 
+            (currentTime - entry.timestamp) <= 24 * 60 * 60 * 1000
+        );
+        return this.leaderboard.some(entry => entry.name === name);
+    }
+
+    updateLeaderboard() {
+        const currentTime = new Date().getTime();
+        const existingEntry = this.leaderboard.find(entry => entry.name === this.playerName);
+        
+        if (existingEntry) {
+            if (this.score > existingEntry.score) {
+                existingEntry.score = this.score;
+                existingEntry.timestamp = currentTime;
+                existingEntry.date = new Date().toLocaleString();
+            }
+        } else {
+            this.leaderboard.push({
+                name: this.playerName,
+                score: this.score,
+                timestamp: currentTime,
+                date: new Date().toLocaleString()
+            });
+        }
+
+        // 按分数排序
+        this.leaderboard.sort((a, b) => b.score - a.score);
+        
+        // 保存到本地存储
+        this.saveLeaderboard();
+        
+        // 更新显示
+        this.displayLeaderboard();
+    }
+
+    displayLeaderboard() {
+        const leaderboardDiv = document.getElementById('leaderboard');
+        const tbody = document.getElementById('leaderboardBody');
+        tbody.innerHTML = '';
+
+        this.leaderboard.slice(0, 10).forEach((entry, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${entry.name}</td>
+                <td>${entry.score}</td>
+                <td>${entry.date}</td>
+            `;
+            if (entry.name === this.playerName) {
+                row.style.backgroundColor = '#4CAF5033';
+            }
+            tbody.appendChild(row);
+        });
+
+        leaderboardDiv.style.display = 'block';
     }
 
     startGame() {
@@ -93,6 +190,7 @@ class ShootingGame {
         this.updateScore();
         this.createNewTarget();
         document.getElementById('startGame').textContent = '游戏进行中';
+        document.getElementById('leaderboard').style.display = 'none';
         
         if (this.gameTimer) {
             clearInterval(this.gameTimer);
@@ -131,7 +229,11 @@ class ShootingGame {
         this.ctx.fillText(`最终得分: ${this.score}`, this.canvas.width / 2, this.canvas.height / 2 + scoreSize);
         
         document.getElementById('startGame').textContent = '开始游戏';
+        document.getElementById('playerName').disabled = false;
         this.target = null;
+
+        // 更新排行榜
+        this.updateLeaderboard();
     }
 
     createNewTarget() {
