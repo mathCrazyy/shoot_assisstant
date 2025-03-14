@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>射击训练辅助器</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            overflow: hidden;
+        }
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-top: 10px;
+        }
+        #gameCanvas {
+            cursor: crosshair;
+            width: 100%;
+            height: auto;
+            touch-action: none;
+        }
+        #controls {
+            margin: 10px 0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        #score {
+            font-size: 20px;
+            margin: 10px 0;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            touch-action: manipulation;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        @media (max-width: 600px) {
+            #score {
+                font-size: 18px;
+            }
+            button {
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+            #controls {
+                margin: 5px 0;
+                gap: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="score">得分: 0</div>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+    <div id="controls">
+        <button id="toggleBackground">切换背景</button>
+        <button id="startGame">开始游戏</button>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html> 

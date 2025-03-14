@@ -1,0 +1,279 @@
+class ShootingGame {
+    constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.score = 0;
+        this.isForestBackground = false;
+        this.gameStarted = false;
+        this.target = null;
+        this.animationFrame = null;
+        this.difficultyLevel = 1;
+        this.floatingScores = [];
+        this.gameTime = 60; // 60秒游戏时间
+        this.timeLeft = this.gameTime;
+        this.gameTimer = null;
+        this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        // 设置画布大小
+        this.resizeCanvas();
+        window.addEventListener('resize', () => this.resizeCanvas());
+        
+        // 颜色定义
+        this.backgrounds = {
+            dark: '#000000',
+            forest: '#228B22'
+        };
+        
+        this.setupEventListeners();
+    }
+
+    resizeCanvas() {
+        const container = this.canvas.parentElement;
+        const containerWidth = container.clientWidth;
+        const containerHeight = window.innerHeight * 0.6; // 使用60%的视窗高度
+        
+        // 设置画布大小
+        this.canvas.width = containerWidth;
+        this.canvas.height = containerHeight;
+        
+        // 如果游戏正在进行，重绘当前状态
+        if (this.gameStarted) {
+            this.drawBackground();
+            if (this.target) this.drawTarget();
+        }
+    }
+
+    setupEventListeners() {
+        // 触摸事件
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // 防止双击缩放
+            if (!this.gameStarted || !this.target) return;
+            
+            const touch = e.touches[0];
+            const rect = this.canvas.getBoundingClientRect();
+            const x = (touch.clientX - rect.left) * (this.canvas.width / rect.width);
+            const y = (touch.clientY - rect.top) * (this.canvas.height / rect.height);
+            
+            this.checkHit(x, y);
+        }, { passive: false });
+
+        // 鼠标点击事件（桌面设备）
+        this.canvas.addEventListener('click', (e) => {
+            if (!this.gameStarted || !this.target || this.isMobile) return;
+            
+            const rect = this.canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (this.canvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (this.canvas.height / rect.height);
+            
+            this.checkHit(x, y);
+        });
+
+        document.getElementById('toggleBackground').addEventListener('click', (e) => {
+            e.preventDefault();
+            this.isForestBackground = !this.isForestBackground;
+            this.drawBackground();
+            if (this.target) this.drawTarget();
+        });
+
+        document.getElementById('startGame').addEventListener('click', (e) => {
+            e.preventDefault();
+            if (!this.gameStarted) {
+                this.startGame();
+            }
+        });
+    }
+
+    startGame() {
+        this.gameStarted = true;
+        this.score = 0;
+        this.difficultyLevel = 1;
+        this.timeLeft = this.gameTime;
+        this.floatingScores = [];
+        this.updateScore();
+        this.createNewTarget();
+        document.getElementById('startGame').textContent = '游戏进行中';
+        
+        if (this.gameTimer) {
+            clearInterval(this.gameTimer);
+        }
+        
+        this.gameTimer = setInterval(() => {
+            this.timeLeft--;
+            if (this.timeLeft <= 0) {
+                this.endGame();
+            }
+        }, 1000);
+    }
+
+    endGame() {
+        this.gameStarted = false;
+        clearInterval(this.gameTimer);
+        cancelAnimationFrame(this.animationFrame);
+        
+        this.ctx.fillStyle = this.isForestBackground ? this.backgrounds.forest : this.backgrounds.dark;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        const titleSize = Math.min(this.canvas.width * 0.06, 36);
+        const scoreSize = Math.min(this.canvas.width * 0.05, 30);
+        
+        this.ctx.fillStyle = 'white';
+        this.ctx.font = `bold ${titleSize}px Arial`;
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('游戏结束!', this.canvas.width / 2, this.canvas.height / 2 - titleSize);
+        
+        this.ctx.font = `${scoreSize}px Arial`;
+        this.ctx.fillText(`最终得分: ${this.score}`, this.canvas.width / 2, this.canvas.height / 2 + scoreSize);
+        
+        document.getElementById('startGame').textContent = '开始游戏';
+        this.target = null;
+    }
+
+    createNewTarget() {
+        const minDistance = Math.min(this.canvas.width, this.canvas.height) * 0.1; // 10%的边距
+        const maxX = this.canvas.width - minDistance;
+        const maxY = this.canvas.height - minDistance;
+        
+        const x = Math.random() * (maxX - minDistance) + minDistance;
+        const y = Math.random() * (maxY - minDistance) + minDistance;
+        
+        // 根据屏幕大小调整目标大小
+        const baseRadius = Math.min(this.canvas.width, this.canvas.height) * 0.05; // 5%的屏幕尺寸
+        
+        this.target = {
+            x,
+            y,
+            baseRadius,
+            currentRadius: baseRadius,
+            pulseAmount: 0,
+            pulseSpeed: 0.05 * this.difficultyLevel,
+            opacity: 1
+        };
+
+        this.animate();
+    }
+
+    animate() {
+        if (!this.gameStarted) return;
+
+        this.drawBackground();
+        this.updateTarget();
+        this.drawTarget();
+        this.updateFloatingScores();
+        this.drawTimer();
+
+        this.animationFrame = requestAnimationFrame(() => this.animate());
+    }
+
+    updateTarget() {
+        if (!this.target) return;
+
+        // 更新脉冲效果
+        this.target.pulseAmount += this.target.pulseSpeed;
+        this.target.currentRadius = this.target.baseRadius + Math.sin(this.target.pulseAmount) * 5;
+
+        // 根据难度调整闪烁
+        if (this.difficultyLevel > 1) {
+            this.target.opacity = 0.5 + Math.abs(Math.sin(this.target.pulseAmount * this.difficultyLevel)) * 0.5;
+        }
+    }
+
+    drawBackground() {
+        this.ctx.fillStyle = this.isForestBackground ? this.backgrounds.forest : this.backgrounds.dark;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
+    drawTarget() {
+        if (!this.target) return;
+
+        // 绘制光晕效果
+        const gradient = this.ctx.createRadialGradient(
+            this.target.x, this.target.y, 0,
+            this.target.x, this.target.y, this.target.currentRadius
+        );
+
+        gradient.addColorStop(0, `rgba(255, 0, 0, ${this.target.opacity})`);
+        gradient.addColorStop(0.3, `rgba(255, 165, 0, ${this.target.opacity * 0.8})`);
+        gradient.addColorStop(1, 'rgba(255, 255, 0, 0)');
+
+        this.ctx.beginPath();
+        this.ctx.arc(this.target.x, this.target.y, this.target.currentRadius, 0, Math.PI * 2);
+        this.ctx.fillStyle = gradient;
+        this.ctx.fill();
+    }
+
+    drawTimer() {
+        const timerSize = Math.min(this.canvas.width * 0.04, 24); // 响应式字体大小
+        this.ctx.fillStyle = 'white';
+        this.ctx.font = `${timerSize}px Arial`;
+        this.ctx.textAlign = 'right';
+        this.ctx.fillText(`时间: ${this.timeLeft}秒`, this.canvas.width - 20, timerSize + 5);
+    }
+
+    addFloatingScore(x, y, score) {
+        const fontSize = Math.min(this.canvas.width * 0.04, 24); // 响应式字体大小
+        this.floatingScores.push({
+            x,
+            y,
+            score,
+            opacity: 1,
+            distance: 0,
+            fontSize
+        });
+    }
+
+    updateFloatingScores() {
+        for (let i = this.floatingScores.length - 1; i >= 0; i--) {
+            const floating = this.floatingScores[i];
+            
+            floating.distance += this.canvas.height * 0.003; // 响应式移动速度
+            floating.y -= this.canvas.height * 0.003;
+            floating.opacity -= 0.02;
+            
+            this.ctx.fillStyle = `rgba(255, 0, 0, ${floating.opacity})`;
+            this.ctx.font = `bold ${floating.fontSize}px Arial`;
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(`+${floating.score}`, floating.x, floating.y);
+            
+            if (floating.opacity <= 0) {
+                this.floatingScores.splice(i, 1);
+            }
+        }
+    }
+
+    checkHit(x, y) {
+        if (!this.target) return;
+
+        const distance = Math.sqrt(
+            Math.pow(x - this.target.x, 2) + 
+            Math.pow(y - this.target.y, 2)
+        );
+
+        // 计算得分（1-3分）
+        if (distance <= this.target.currentRadius) {
+            const scoreMultiplier = Math.max(1, 4 - Math.ceil(distance / 10));
+            this.score += scoreMultiplier;
+            
+            // 添加浮动得分效果
+            this.addFloatingScore(this.target.x, this.target.y - 20, scoreMultiplier);
+            
+            this.updateScore();
+
+            // 增加难度
+            if (this.score > this.difficultyLevel * 10) {
+                this.difficultyLevel++;
+            }
+
+            cancelAnimationFrame(this.animationFrame);
+            this.createNewTarget();
+        }
+    }
+
+    updateScore() {
+        document.getElementById('score').textContent = `得分: ${this.score}`;
+    }
+}
+
+// 初始化游戏
+window.onload = () => {
+    new ShootingGame();
+}; 
