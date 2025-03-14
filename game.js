@@ -28,6 +28,7 @@ class ShootingGame {
         };
         
         this.setupEventListeners();
+        this.displayLeaderboard(); // 初始化时加载排行榜
     }
 
     resizeCanvas() {
@@ -110,6 +111,16 @@ class ShootingGame {
                 }
             }
         });
+
+        // 添加排行榜按钮事件监听
+        document.getElementById('showLeaderboard').addEventListener('click', () => {
+            this.showLeaderboardPage();
+        });
+
+        // 添加返回游戏按钮事件监听
+        document.getElementById('backToGame').addEventListener('click', () => {
+            this.showGamePage();
+        });
     }
 
     loadLeaderboard() {
@@ -160,7 +171,6 @@ class ShootingGame {
     }
 
     displayLeaderboard() {
-        const leaderboardDiv = document.getElementById('leaderboard');
         const tbody = document.getElementById('leaderboardBody');
         tbody.innerHTML = '';
 
@@ -177,8 +187,6 @@ class ShootingGame {
             }
             tbody.appendChild(row);
         });
-
-        leaderboardDiv.style.display = 'block';
     }
 
     startGame() {
@@ -232,8 +240,11 @@ class ShootingGame {
         document.getElementById('playerName').disabled = false;
         this.target = null;
 
-        // 更新排行榜
+        // 更新排行榜并显示
         this.updateLeaderboard();
+        setTimeout(() => {
+            this.showLeaderboardPage();
+        }, 2000); // 2秒后显示排行榜
     }
 
     createNewTarget() {
@@ -414,6 +425,17 @@ class ShootingGame {
 
     updateScore() {
         document.getElementById('score').textContent = `得分: ${this.score}`;
+    }
+
+    showLeaderboardPage() {
+        document.getElementById('gamePage').classList.remove('active');
+        document.getElementById('leaderboardPage').classList.add('active');
+        this.displayLeaderboard(); // 刷新排行榜数据
+    }
+
+    showGamePage() {
+        document.getElementById('leaderboardPage').classList.remove('active');
+        document.getElementById('gamePage').classList.add('active');
     }
 }
 

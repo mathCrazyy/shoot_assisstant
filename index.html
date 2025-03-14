@@ -73,24 +73,53 @@
             color: white;
             width: 200px;
         }
-        #leaderboard {
-            width: 100%;
-            max-width: 600px;
-            margin: 20px auto;
+        #errorMessage {
+            color: #ff4444;
+            margin-top: 5px;
+            font-size: 14px;
             display: none;
         }
-        .leaderboard-title {
-            text-align: center;
+        .page {
+            display: none;
+            width: 100%;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: #1a1a1a;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        .page.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #leaderboardPage {
+            padding: 20px;
+        }
+        .page-header {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 10px;
+        }
+        .page-title {
             font-size: 24px;
-            margin-bottom: 15px;
             color: #4CAF50;
+            margin: 0;
         }
         .leaderboard-table {
             width: 100%;
+            max-width: 800px;
             border-collapse: collapse;
             background-color: #2a2a2a;
             border-radius: 5px;
             overflow: hidden;
+            margin-top: 20px;
         }
         .leaderboard-table th,
         .leaderboard-table td {
@@ -107,12 +136,6 @@
         }
         .leaderboard-table tr:hover {
             background-color: #3a3a3a;
-        }
-        #errorMessage {
-            color: #ff4444;
-            margin-top: 5px;
-            font-size: 14px;
-            display: none;
         }
         @media (max-width: 600px) {
             #score {
@@ -131,24 +154,36 @@
                 padding: 8px;
                 font-size: 14px;
             }
+            .page-title {
+                font-size: 20px;
+            }
         }
     </style>
 </head>
 <body>
-    <div id="playerForm">
-        <input type="text" id="playerName" placeholder="输入你的昵称" maxlength="20">
-        <div id="errorMessage">该昵称已被使用，请重新输入</div>
-        <button id="startGame" disabled>开始游戏</button>
+    <!-- 游戏页面 -->
+    <div id="gamePage" class="page active">
+        <div id="playerForm">
+            <input type="text" id="playerName" placeholder="输入你的昵称" maxlength="20">
+            <div id="errorMessage">该昵称已被使用，请重新输入</div>
+            <button id="startGame" disabled>开始游戏</button>
+        </div>
+        <div id="score">得分: 0</div>
+        <div id="gameContainer">
+            <canvas id="gameCanvas"></canvas>
+        </div>
+        <div id="controls">
+            <button id="toggleBackground">切换背景</button>
+            <button id="showLeaderboard">排行榜</button>
+        </div>
     </div>
-    <div id="score">得分: 0</div>
-    <div id="gameContainer">
-        <canvas id="gameCanvas"></canvas>
-    </div>
-    <div id="controls">
-        <button id="toggleBackground">切换背景</button>
-    </div>
-    <div id="leaderboard">
-        <div class="leaderboard-title">排行榜</div>
+
+    <!-- 排行榜页面 -->
+    <div id="leaderboardPage" class="page">
+        <div class="page-header">
+            <h1 class="page-title">射击训练排行榜</h1>
+            <button id="backToGame">返回游戏</button>
+        </div>
         <table class="leaderboard-table">
             <thead>
                 <tr>
@@ -162,6 +197,7 @@
             </tbody>
         </table>
     </div>
+
     <script src="game.js"></script>
 </body>
 </html> 
