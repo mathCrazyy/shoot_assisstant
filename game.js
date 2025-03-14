@@ -198,18 +198,23 @@ class ShootingGame {
         this.updateScore();
         this.createNewTarget();
         document.getElementById('startGame').textContent = '游戏进行中';
-        document.getElementById('leaderboard').style.display = 'none';
+        document.getElementById('leaderboardPage').classList.remove('active');
+        document.getElementById('gamePage').classList.add('active');
         
         if (this.gameTimer) {
             clearInterval(this.gameTimer);
         }
         
+        // 每秒更新一次时间
         this.gameTimer = setInterval(() => {
             this.timeLeft--;
             if (this.timeLeft <= 0) {
                 this.endGame();
             }
         }, 1000);
+
+        // 开始游戏动画循环
+        this.animate();
     }
 
     endGame() {
@@ -307,7 +312,7 @@ class ShootingGame {
         this.updateTarget();
         this.drawTarget();
         this.updateFloatingScores();
-        this.drawTimer();
+        this.drawTimer(); // 确保每帧都更新时间显示
 
         this.animationFrame = requestAnimationFrame(() => this.animate());
     }
@@ -350,11 +355,11 @@ class ShootingGame {
     }
 
     drawTimer() {
-        const timerSize = Math.min(this.canvas.width * 0.04, 24); // 响应式字体大小
+        const timerSize = Math.min(this.canvas.width * 0.04, 24);
         this.ctx.fillStyle = 'white';
         this.ctx.font = `${timerSize}px Arial`;
         this.ctx.textAlign = 'right';
-        this.ctx.fillText(`时间: ${this.timeLeft}秒`, this.canvas.width - 20, timerSize + 5);
+        this.ctx.fillText(`剩余时间: ${Math.max(0, this.timeLeft)}秒`, this.canvas.width - 20, timerSize + 5);
     }
 
     addFloatingScore(x, y, score, isPenalty = false) {
