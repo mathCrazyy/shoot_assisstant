@@ -9,9 +9,10 @@ class ShootingGame {
         this.animationFrame = null;
         this.difficultyLevel = 1;
         this.floatingScores = [];
-        this.gameTime = 60; // 60秒游戏时间
+        this.gameTime = 30; // 修改为30秒
         this.timeLeft = this.gameTime;
         this.gameTimer = null;
+        this.targetTimer = null;
         this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         
         // 设置画布大小
@@ -107,7 +108,12 @@ class ShootingGame {
 
     endGame() {
         this.gameStarted = false;
-        clearInterval(this.gameTimer);
+        if (this.gameTimer) {
+            clearInterval(this.gameTimer);
+        }
+        if (this.targetTimer) {
+            clearTimeout(this.targetTimer);
+        }
         cancelAnimationFrame(this.animationFrame);
         
         this.ctx.fillStyle = this.isForestBackground ? this.backgrounds.forest : this.backgrounds.dark;
@@ -129,15 +135,16 @@ class ShootingGame {
     }
 
     createNewTarget() {
-        const minDistance = Math.min(this.canvas.width, this.canvas.height) * 0.1; // 10%的边距
+        if (!this.gameStarted) return;
+
+        const minDistance = Math.min(this.canvas.width, this.canvas.height) * 0.1;
         const maxX = this.canvas.width - minDistance;
         const maxY = this.canvas.height - minDistance;
         
         const x = Math.random() * (maxX - minDistance) + minDistance;
         const y = Math.random() * (maxY - minDistance) + minDistance;
         
-        // 根据屏幕大小调整目标大小
-        const baseRadius = Math.min(this.canvas.width, this.canvas.height) * 0.05; // 5%的屏幕尺寸
+        const baseRadius = Math.min(this.canvas.width, this.canvas.height) * 0.05;
         
         this.target = {
             x,
@@ -146,8 +153,36 @@ class ShootingGame {
             currentRadius: baseRadius,
             pulseAmount: 0,
             pulseSpeed: 0.05 * this.difficultyLevel,
-            opacity: 1
+            opacity: 1,
+            createdAt: Date.now()
         };
+
+        // 修改目标存在时间（0.8到2秒之间，随难度递减）
+        const maxDuration = Math.max(800, 2000 - (this.difficultyLevel * 150));
+        const minDuration = Math.max(600, maxDuration - 1200);
+        const duration = Math.random() * (maxDuration - minDuration) + minDuration;
+
+        // 清除之前的定时器
+        if (this.targetTimer) {
+            clearTimeout(this.targetTimer);
+        }
+
+        // 设置新的定时器
+        this.targetTimer = setTimeout(() => {
+            if (this.target) {
+                // 扣分：根据目标大小决定扣分数量（1-3分）
+                const penalty = Math.ceil(this.target.currentRadius / 10);
+                this.score = Math.max(0, this.score - penalty);
+                this.updateScore();
+                
+                // 显示扣分动画
+                this.addFloatingScore(this.target.x, this.target.y - 20, -penalty, true);
+                
+                // 移除目标并创建新目标
+                this.target = null;
+                this.createNewTarget();
+            }
+        }, duration);
 
         this.animate();
     }
@@ -209,15 +244,16 @@ class ShootingGame {
         this.ctx.fillText(`时间: ${this.timeLeft}秒`, this.canvas.width - 20, timerSize + 5);
     }
 
-    addFloatingScore(x, y, score) {
-        const fontSize = Math.min(this.canvas.width * 0.04, 24); // 响应式字体大小
+    addFloatingScore(x, y, score, isPenalty = false) {
+        const fontSize = Math.min(this.canvas.width * 0.04, 24);
         this.floatingScores.push({
             x,
             y,
             score,
             opacity: 1,
             distance: 0,
-            fontSize
+            fontSize,
+            isPenalty
         });
     }
 
@@ -225,14 +261,20 @@ class ShootingGame {
         for (let i = this.floatingScores.length - 1; i >= 0; i--) {
             const floating = this.floatingScores[i];
             
-            floating.distance += this.canvas.height * 0.003; // 响应式移动速度
+            floating.distance += this.canvas.height * 0.003;
             floating.y -= this.canvas.height * 0.003;
             floating.opacity -= 0.02;
             
-            this.ctx.fillStyle = `rgba(255, 0, 0, ${floating.opacity})`;
+            this.ctx.fillStyle = floating.isPenalty ? 
+                `rgba(255, 0, 0, ${floating.opacity})` : 
+                `rgba(0, 255, 0, ${floating.opacity})`;
             this.ctx.font = `bold ${floating.fontSize}px Arial`;
             this.ctx.textAlign = 'center';
-            this.ctx.fillText(`+${floating.score}`, floating.x, floating.y);
+            this.ctx.fillText(
+                floating.score > 0 ? `+${floating.score}` : `${floating.score}`,
+                floating.x,
+                floating.y
+            );
             
             if (floating.opacity <= 0) {
                 this.floatingScores.splice(i, 1);
